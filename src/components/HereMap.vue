@@ -89,7 +89,7 @@ export default {
       const marker = new H.map.Marker(pos, { icon: icon })
       marker.setData(data)
       marker.addEventListener('tap', (e) => {
-        marker.setIcon()
+        // marker.setIcon()
       })
       group.addObject(marker)
     }
