@@ -4,6 +4,7 @@
 
 <script>
 /* eslint-disable no-undef */
+/* eslint-disable no-unused-vars */
 
 export default {
   name: 'HereMap',
@@ -18,7 +19,18 @@ export default {
   data () {
     return {
       map: {},
-      platform: {}
+      platform: {},
+      iconType: 'default'
+    }
+  },
+  computed: {
+    icon () {
+      return require(`@/assets/home-${this.iconType}.svg`)
+    }
+  },
+  watch: {
+    dataPoints (val) {
+      this.initMap()
     }
   },
   created () {
@@ -27,34 +39,60 @@ export default {
     })
   },
   mounted () {
-    // const clusteredDataProvider = new H.clustering.Provider(this.dataPoints)
+    if (this.dataPoints.length) {
+      this.initMap()
+    }
+  },
+  methods: {
+    initMap () {
+      const defaultLayers = this.platform.createDefaultLayers()
+      // Define a variable holding mark-up that defines an icon image
+      const defaultImg = new Image()
+      defaultImg.src = this.icon
+      const imgIcon = defaultImg
 
-    // // Create a layer that includes the data provider and its data points:
-    // const layer = new H.map.layer.ObjectLayer(clusteredDataProvider)
+      this.map = new H.Map(
+        this.$refs.map,
+        defaultLayers.vector.normal.map,
+        {
+          zoom: 15,
+          center: this.dataPoints.length ? this.dataPoints[0].position : { lat: 0, lng: 0 }
+        }
+      )
 
-    // // Add the layer to the map:
-    // this.map.addLayer(layer)
-    // Define a variable holding SVG mark-up that defines an icon image:
-    const img = new Image()
-    img.src = require('@/assets/home-default.svg')
-    const imgIcon = img
+      window.addEventListener('resize', () => this.map.getViewPort().resize())
 
-    this.map = new H.Map(
-      this.$refs.map,
-      this.platform.createDefaultLayers().vector.normal.map,
-      {
-        zoom: 10
+      // Create an icon, an object holding the latitude and longitude, and a marker:
+      const icon = new H.map.Icon(imgIcon)
+      const group = new H.map.Group()
+      this.map.addObject(group)
+
+      group.addEventListener('tap', (evt) => {
+        const element = document.getElementById(`div-${evt.target.getData().position.lat}`)
+        element.scrollIntoView({ behavior: 'smooth' })
+        this.iconType = 'active'
+        console.log(evt.target.getData())
+      }, false)
+
+      for (let i = 0; i < this.dataPoints.length; i++) {
+        this.addMarkerToGroup(this.dataPoints[i].position, icon, this.dataPoints[i], group)
       }
-    )
 
-    // Create an icon, an object holding the latitude and longitude, and a marker:
-    const icon = new H.map.Icon(imgIcon)
-    const coords = { lng: this.lng, lat: this.lat }
-    const marker = new H.map.Marker(coords, { icon: icon })
+      // MapEvents enables the event system
+      // Behavior implements default interactions for pan/zoom (also on mobile touch environments)
+      var behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(this.map))
 
-    // Add the marker to the map and center the map at the location of the marker:
-    this.map.addObject(marker)
-    this.map.setCenter(coords)
+      // create default UI with layers provided by the platform
+      var ui = H.ui.UI.createDefault(this.map, defaultLayers)
+    },
+    addMarkerToGroup (pos, icon, data, group) {
+      const marker = new H.map.Marker(pos, { icon: icon })
+      marker.setData(data)
+      marker.addEventListener('tap', (e) => {
+        marker.setIcon()
+      })
+      group.addObject(marker)
+    }
   }
 }
 </script>
